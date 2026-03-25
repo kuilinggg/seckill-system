@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
 
 @RestController
 @RequestMapping("/api/users")
@@ -24,12 +25,24 @@ public class UserController {
 
     @PostMapping("/login")
     public Result<User> login(@RequestBody LoginRequest request) {
-        return userService.login(request.getAccount(), request.getPassword());
+        return userService.login(request.resolveAccount(), request.getPassword());
     }
 
     @Data
     public static class LoginRequest {
         private String account;
+        private String username;
+        private String phone;
         private String password;
+
+        public String resolveAccount() {
+            if (StringUtils.hasText(account)) {
+                return account;
+            }
+            if (StringUtils.hasText(username)) {
+                return username;
+            }
+            return phone;
+        }
     }
 }
