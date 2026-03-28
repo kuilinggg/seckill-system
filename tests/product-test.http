@@ -1,0 +1,3 @@
+### 商品详情查询
+GET http://localhost:8083/api/products/1
+Accept: application/json

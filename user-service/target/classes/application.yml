@@ -5,7 +5,7 @@ spring:
     application:
         name: user-service
     datasource:
-        url: jdbc:mysql://127.0.0.1:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+        url: jdbc:mysql://seckill-mysql:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
         username: root
         password: 123456
         driver-class-name: com.mysql.cj.jdbc.Driver

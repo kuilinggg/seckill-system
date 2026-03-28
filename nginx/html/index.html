@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seckill System - 秒杀平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <header class="hero">
+    <div class="hero__badge">HIGH CONCURRENCY LAB</div>
+    <h1>企业级秒杀系统</h1>
+    <p>Docker + Nginx 动静分离 + 负载均衡演示页</p>
+    <a class="hero__btn" href="/api/users/login">测试 API 路由</a>
+  </header>
+
+  <main class="cards">
+    <section class="card">
+      <h2>动静分离</h2>
+      <p>HTML / CSS / JS 由 Nginx 直接提供，降低后端静态资源压力。</p>
+    </section>
+    <section class="card">
+      <h2>负载均衡</h2>
+      <p>/api 请求通过 upstream 分发至 user-service-1 与 user-service-2。</p>
+    </section>
+    <section class="card">
+      <h2>高并发演进</h2>
+      <p>后续可继续接入 Redis、MQ、限流与降级能力，支撑秒杀洪峰流量。</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="buildTime"></span>
+  </footer>
+
+  <script src="./js/main.js"></script>
+</body>
+</html>

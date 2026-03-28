@@ -1,0 +1,58 @@
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editor files
+# =========================
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# =========================
+# Java / Maven build outputs
+# =========================
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# =========================
+# Logs / runtime files
+# =========================
+*.log
+logs/
+*.pid
+*.pid.lock
+hs_err_pid*
+
+# =========================
+# Test / coverage / reports
+# =========================
+**/surefire-reports/
+**/failsafe-reports/
+coverage/
+
+# =========================
+# Environment / secrets
+# =========================
+.env
+.env.*
+*.local
+
+# =========================
+# Docker local data
+# =========================
+/docker/mysql/data/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.swp
+*~
