@@ -1,3 +1,7 @@
 ### 商品详情查询
-GET http://localhost:8083/api/products/1
+GET http://localhost:8085/api/products/1
+Accept: application/json
+
+### 同步商品到ES
+POST http://localhost:8085/api/products/sync/1
 Accept: application/json

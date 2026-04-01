@@ -2,13 +2,22 @@ package com.seckill.product.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.baomidou.dynamic.datasource.annotation.DS;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.seckill.product.entity.Product;
 import com.seckill.product.mapper.ProductMapper;
+import com.seckill.product.search.ProductDoc;
+import com.seckill.product.search.ProductRepository;
 import com.seckill.product.service.ProductService;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -37,8 +46,11 @@ public class ProductServiceImpl implements ProductService {
     private final ProductMapper productMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final ProductRepository productRepository;
+    private final ElasticsearchOperations elasticsearchOperations;
 
     @Override
+    @DS("slave_1")
     public Product getProductById(Long id) {
         if (id == null || id <= 0) {
             return null;
@@ -105,6 +117,63 @@ public class ProductServiceImpl implements ProductService {
         // 兜底降级：缓存重建未完成时返回 null，由上层决定提示信息。
         log.warn("缓存重建等待超时，productId={}", id);
         return null;
+    }
+
+    @Override
+    @DS("master")
+    public boolean reduceStock(Long id, Integer count) {
+        if (id == null || id <= 0 || count == null || count <= 0) {
+            return false;
+        }
+
+        int rows = productMapper.update(null, new LambdaUpdateWrapper<Product>()
+                .setSql("stock = stock - " + count)
+                .eq(Product::getId, id)
+                .ge(Product::getStock, count));
+
+        if (rows > 0) {
+            // 扣减成功后主动删除缓存，确保后续读请求重新加载最新库存。
+            stringRedisTemplate.delete(CACHE_KEY_PREFIX + id);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    @DS("slave_1")
+    public boolean syncProductToEs(Long id) {
+        if (id == null || id <= 0) {
+            return false;
+        }
+
+        Product product = productMapper.selectById(id);
+        if (product == null) {
+            return false;
+        }
+
+        ProductDoc doc = new ProductDoc();
+        doc.setId(product.getId());
+        doc.setTitle(product.getTitle());
+        doc.setPrice(product.getPrice());
+        doc.setStock(product.getStock());
+        productRepository.save(doc);
+        return true;
+    }
+
+    @Override
+    public List<ProductDoc> searchProducts(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return Collections.emptyList();
+        }
+
+        NativeQuery query = NativeQuery.builder()
+                .withQuery(q -> q.match(m -> m.field("title").query(keyword)))
+                .build();
+
+        return elasticsearchOperations.search(query, ProductDoc.class)
+                .stream()
+                .map(SearchHit::getContent)
+                .toList();
     }
 
     private boolean tryLock(String lockKey, String lockToken) {

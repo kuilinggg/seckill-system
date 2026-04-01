@@ -49,6 +49,18 @@ coverage/
 # Docker local data
 # =========================
 /docker/mysql/data/
+/docker/mysql-master/data/
+/docker/mysql-slave/data/
+/docker/**/data/
+
+# =========================
+# Java IDE / tooling extras
+# =========================
+.classpath
+.project
+.settings/
+out/
+bin/
 
 # =========================
 # Temporary files
