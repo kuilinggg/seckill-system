@@ -1,0 +1,55 @@
+@host = http://localhost:8087
+@contentType = application/json
+
+### 0) 健康探测（若返回 404 也说明服务已启动）
+GET {{host}}/actuator/health
+Accept: application/json
+
+### 1) 秒杀下单 - 首次请求（预期：成功入队，返回“正在排队处理中”）
+POST {{host}}/api/orders/seckill
+Content-Type: {{contentType}}
+
+{
+  "userId": 1001,
+  "productId": 1
+}
+
+### 2) 秒杀下单 - 同用户重复请求（预期：幂等拦截，提示重复下单）
+POST {{host}}/api/orders/seckill
+Content-Type: {{contentType}}
+
+{
+  "userId": 1001,
+  "productId": 1
+}
+
+### 3) 秒杀下单 - 新用户请求（用于继续压测库存）
+POST {{host}}/api/orders/seckill
+Content-Type: {{contentType}}
+
+{
+  "userId": 1002,
+  "productId": 1
+}
+
+### 4) 秒杀下单 - 新用户请求（继续压测库存）
+POST {{host}}/api/orders/seckill
+Content-Type: {{contentType}}
+
+{
+  "userId": 1003,
+  "productId": 1
+}
+
+### 5) 根据订单ID查询（请把 1940000000000000000 替换为控制台日志中的真实订单ID）
+GET {{host}}/api/orders/1940000000000000000
+Accept: application/json
+
+### 6) 秒杀下单 - 快速售罄测试模板（把 userId 连续改大重复发送）
+POST {{host}}/api/orders/seckill
+Content-Type: {{contentType}}
+
+{
+  "userId": 2001,
+  "productId": 1
+}
