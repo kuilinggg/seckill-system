@@ -7,4 +7,6 @@ public interface OrderService {
     String seckill(Long userId, Long productId);
 
     Order getById(Long id);
+
+    String handlePaymentResult(String orderNo, Boolean success);
 }

@@ -1,4 +1,4 @@
-package com.seckill.order.entity;
+package com.seckill.inventory.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -7,23 +7,21 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-@TableName("t_order")
-public class Order {
+@TableName("t_inventory_reservation")
+public class InventoryReservation {
 
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    private Long userId;
+    private String orderNo;
 
     private Long productId;
 
-    private String orderNo;
-
-    private Integer count;
+    private Integer reserveCount;
 
     private Integer status;
 
-    private String paymentStatus;
+    private String reason;
 
     private LocalDateTime createTime;
 

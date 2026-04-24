@@ -25,6 +25,12 @@ public class OrderController {
         return Result.success(result);
     }
 
+    @PostMapping("/payment/callback")
+    public Result<String> paymentCallback(@RequestBody PaymentCallbackRequest request) {
+        String result = orderService.handlePaymentResult(request.getOrderNo(), request.getSuccess());
+        return Result.success(result);
+    }
+
     @GetMapping("/{id}")
     public Result<Order> getById(@PathVariable("id") Long id) {
         Order order = orderService.getById(id);
@@ -38,5 +44,11 @@ public class OrderController {
     public static class SeckillRequest {
         private Long userId;
         private Long productId;
+    }
+
+    @Data
+    public static class PaymentCallbackRequest {
+        private String orderNo;
+        private Boolean success;
     }
 }

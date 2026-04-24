@@ -5,7 +5,7 @@
 GET {{host}}/actuator/health
 Accept: application/json
 
-### 1) 秒杀下单 - 首次请求（预期：成功入队，返回“正在排队处理中”）
+### 1) 秒杀下单 - 首次请求（预期：返回订单号，状态为等待库存确认）
 POST {{host}}/api/orders/seckill
 Content-Type: {{contentType}}
 
@@ -41,11 +41,29 @@ Content-Type: {{contentType}}
   "productId": 1
 }
 
-### 5) 根据订单ID查询（请把 1940000000000000000 替换为控制台日志中的真实订单ID）
+### 5) 根据订单ID查询（请把 1940000000000000000 替换为真实订单ID）
 GET {{host}}/api/orders/1940000000000000000
 Accept: application/json
 
-### 6) 秒杀下单 - 快速售罄测试模板（把 userId 连续改大重复发送）
+### 6) 模拟支付成功回调（把 orderNo 替换为下单返回的订单号）
+POST {{host}}/api/orders/payment/callback
+Content-Type: {{contentType}}
+
+{
+  "orderNo": "ORDxxxxxxxxxxxxxxxxxxxx",
+  "success": true
+}
+
+### 7) 模拟支付失败回调（把 orderNo 替换为下单返回的订单号）
+POST {{host}}/api/orders/payment/callback
+Content-Type: {{contentType}}
+
+{
+  "orderNo": "ORDxxxxxxxxxxxxxxxxxxxx",
+  "success": false
+}
+
+### 8) 秒杀下单 - 快速售罄测试模板（把 userId 连续改大重复发送）
 POST {{host}}/api/orders/seckill
 Content-Type: {{contentType}}
 
