@@ -1,8 +1,7 @@
 package com.seckill.product.service;
 
 import com.seckill.product.entity.Product;
-import com.seckill.product.search.ProductDoc;
-import java.util.List;
+import com.seckill.product.search.ProductSearchResult;
 
 public interface ProductService {
 
@@ -12,5 +11,5 @@ public interface ProductService {
 
     boolean syncProductToEs(Long id);
 
-    List<ProductDoc> searchProducts(String keyword);
+    ProductSearchResult searchProducts(String keyword, Integer page, Integer size, Boolean inStockOnly, String sort);
 }

@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS t_order_0 (
     create_time DATETIME NULL,
     update_time DATETIME NULL,
     UNIQUE KEY uk_t_order_0_order_no (order_no),
-    KEY idx_t_order_0_user_product (user_id, product_id)
+    UNIQUE KEY uk_t_order_0_user_product (user_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS t_order_1 (
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS t_order_1 (
     create_time DATETIME NULL,
     update_time DATETIME NULL,
     UNIQUE KEY uk_t_order_1_order_no (order_no),
-    KEY idx_t_order_1_user_product (user_id, product_id)
+    UNIQUE KEY uk_t_order_1_user_product (user_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 USE seckill_order_1;
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS t_order_0 (
     create_time DATETIME NULL,
     update_time DATETIME NULL,
     UNIQUE KEY uk_t_order_0_order_no (order_no),
-    KEY idx_t_order_0_user_product (user_id, product_id)
+    UNIQUE KEY uk_t_order_0_user_product (user_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS t_order_1 (
@@ -107,5 +107,5 @@ CREATE TABLE IF NOT EXISTS t_order_1 (
     create_time DATETIME NULL,
     update_time DATETIME NULL,
     UNIQUE KEY uk_t_order_1_order_no (order_no),
-    KEY idx_t_order_1_user_product (user_id, product_id)
+    UNIQUE KEY uk_t_order_1_user_product (user_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

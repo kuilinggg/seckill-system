@@ -1,23 +1,31 @@
 package com.seckill.product.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.json.JsonData;
 import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seckill.product.entity.Product;
 import com.seckill.product.mapper.ProductMapper;
 import com.seckill.product.search.ProductDoc;
 import com.seckill.product.search.ProductRepository;
+import com.seckill.product.search.ProductSearchResult;
 import com.seckill.product.service.ProductService;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.HighlightQuery;
+import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -35,13 +43,14 @@ public class ProductServiceImpl implements ProductService {
     private static final int BASE_CACHE_MINUTES = 30;
     private static final int AVALANCHE_RANDOM_MINUTES_MIN = 1;
     private static final int AVALANCHE_RANDOM_MINUTES_MAX = 5;
-
     private static final int NULL_CACHE_MINUTES_MIN = 2;
     private static final int NULL_CACHE_MINUTES_MAX = 5;
-
     private static final int LOCK_EXPIRE_SECONDS = 10;
     private static final int RETRY_TIMES = 6;
     private static final long RETRY_SLEEP_BASE_MILLIS = 60L;
+    private static final int DEFAULT_PAGE = 1;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final ProductMapper productMapper;
     private final StringRedisTemplate stringRedisTemplate;
@@ -58,23 +67,18 @@ public class ProductServiceImpl implements ProductService {
 
         String cacheKey = CACHE_KEY_PREFIX + id;
         String lockKey = LOCK_KEY_PREFIX + id;
-
-        // 第一步：先查缓存，绝大多数请求在这里直接返回，避免打到数据库。
         String cachedValue = stringRedisTemplate.opsForValue().get(cacheKey);
         if (NULL_MARKER.equals(cachedValue)) {
-            // 【防穿透】命中空值标记，说明数据库里本来就没有这个商品，直接返回 null。
             return null;
         }
         if (StringUtils.hasText(cachedValue)) {
             return deserializeProduct(cachedValue);
         }
 
-        // 第二步：缓存未命中，尝试获取分布式锁，控制只有一个线程去重建缓存。
         String lockToken = String.valueOf(ThreadLocalRandom.current().nextLong());
         boolean locked = tryLock(lockKey, lockToken);
         if (locked) {
             try {
-                // 双检缓存：避免拿到锁之前，已有其它线程完成缓存回填。
                 String secondCheck = stringRedisTemplate.opsForValue().get(cacheKey);
                 if (NULL_MARKER.equals(secondCheck)) {
                     return null;
@@ -85,13 +89,11 @@ public class ProductServiceImpl implements ProductService {
 
                 Product product = productMapper.selectById(id);
                 if (product == null) {
-                    // 【防穿透】数据库不存在的数据写入空值标记，且 TTL 用短随机时间（2-5 分钟）。
                     int nullTtlMinutes = randomBetween(NULL_CACHE_MINUTES_MIN, NULL_CACHE_MINUTES_MAX);
                     stringRedisTemplate.opsForValue().set(cacheKey, NULL_MARKER, Duration.ofMinutes(nullTtlMinutes));
                     return null;
                 }
 
-                // 【防雪崩】正常商品缓存使用“基础 TTL + 随机波动 TTL”，避免同一时刻集体过期。
                 int randomTtlMinutes = randomBetween(AVALANCHE_RANDOM_MINUTES_MIN, AVALANCHE_RANDOM_MINUTES_MAX);
                 int finalTtlMinutes = BASE_CACHE_MINUTES + randomTtlMinutes;
                 stringRedisTemplate.opsForValue().set(cacheKey, serializeProduct(product), Duration.ofMinutes(finalTtlMinutes));
@@ -101,8 +103,6 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        // 第三步：未拿到锁时，不直接查库，短暂等待后重试查缓存。
-        // 【防击穿】高并发场景下仅允许一个线程查库，其他线程等待缓存重建结果。
         for (int i = 0; i < RETRY_TIMES; i++) {
             sleepQuietly(RETRY_SLEEP_BASE_MILLIS + ThreadLocalRandom.current().nextLong(40L));
             String retryValue = stringRedisTemplate.opsForValue().get(cacheKey);
@@ -114,8 +114,7 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        // 兜底降级：缓存重建未完成时返回 null，由上层决定提示信息。
-        log.warn("缓存重建等待超时，productId={}", id);
+        log.warn("cache rebuild timeout, productId={}", id);
         return null;
     }
 
@@ -132,15 +131,19 @@ public class ProductServiceImpl implements ProductService {
                 .ge(Product::getStock, count));
 
         if (rows > 0) {
-            // 扣减成功后主动删除缓存，确保后续读请求重新加载最新库存。
             stringRedisTemplate.delete(CACHE_KEY_PREFIX + id);
+            try {
+                syncProductToEs(id);
+            } catch (Exception ex) {
+                log.warn("sync product to Elasticsearch failed after stock reduce, productId={}", id, ex);
+            }
             return true;
         }
         return false;
     }
 
     @Override
-    @DS("slave_1")
+    @DS("master")
     public boolean syncProductToEs(Long id) {
         if (id == null || id <= 0) {
             return false;
@@ -151,29 +154,82 @@ public class ProductServiceImpl implements ProductService {
             return false;
         }
 
+        productRepository.save(toDoc(product));
+        return true;
+    }
+
+    @Override
+    public ProductSearchResult searchProducts(String keyword, Integer page, Integer size, Boolean inStockOnly, String sort) {
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        if (!StringUtils.hasText(keyword)) {
+            return new ProductSearchResult(List.of(), 0, currentPage, pageSize);
+        }
+
+        NativeQueryBuilder queryBuilder = NativeQuery.builder()
+                .withQuery(q -> q.match(m -> m.field("title").query(keyword)))
+                .withPageable(org.springframework.data.domain.PageRequest.of(currentPage - 1, pageSize))
+                .withTrackTotalHits(true)
+                .withHighlightQuery(new HighlightQuery(new Highlight(
+                        HighlightParameters.builder()
+                                .withPreTags("<em>")
+                                .withPostTags("</em>")
+                                .build(),
+                        List.of(new HighlightField("title"))), ProductDoc.class));
+
+        if (Boolean.TRUE.equals(inStockOnly)) {
+            queryBuilder.withFilter(q -> q.range(r -> r.field("stock").gt(JsonData.of(0))));
+        }
+
+        applySort(queryBuilder, sort);
+        SearchHits<ProductDoc> searchHits = elasticsearchOperations.search(queryBuilder.build(), ProductDoc.class);
+        List<ProductDoc> records = searchHits.stream()
+                .map(this::withHighlightTitle)
+                .toList();
+        return new ProductSearchResult(records, searchHits.getTotalHits(), currentPage, pageSize);
+    }
+
+    private void applySort(NativeQueryBuilder queryBuilder, String sort) {
+        if (!StringUtils.hasText(sort) || "relevance".equalsIgnoreCase(sort)) {
+            return;
+        }
+        switch (sort.toLowerCase()) {
+            case "price_asc" -> queryBuilder.withSort(s -> s.field(f -> f.field("price").order(SortOrder.Asc)));
+            case "price_desc" -> queryBuilder.withSort(s -> s.field(f -> f.field("price").order(SortOrder.Desc)));
+            case "stock_desc" -> queryBuilder.withSort(s -> s.field(f -> f.field("stock").order(SortOrder.Desc)));
+            default -> log.warn("unsupported product search sort: {}", sort);
+        }
+    }
+
+    private ProductDoc withHighlightTitle(SearchHit<ProductDoc> hit) {
+        ProductDoc doc = hit.getContent();
+        List<String> highlights = hit.getHighlightField("title");
+        if (highlights != null && !highlights.isEmpty()) {
+            doc.setHighlightTitle(highlights.get(0));
+        } else {
+            doc.setHighlightTitle(doc.getTitle());
+        }
+        return doc;
+    }
+
+    private ProductDoc toDoc(Product product) {
         ProductDoc doc = new ProductDoc();
         doc.setId(product.getId());
         doc.setTitle(product.getTitle());
         doc.setPrice(product.getPrice());
         doc.setStock(product.getStock());
-        productRepository.save(doc);
-        return true;
+        return doc;
     }
 
-    @Override
-    public List<ProductDoc> searchProducts(String keyword) {
-        if (!StringUtils.hasText(keyword)) {
-            return Collections.emptyList();
+    private int normalizePage(Integer page) {
+        return page == null || page < 1 ? DEFAULT_PAGE : page;
+    }
+
+    private int normalizeSize(Integer size) {
+        if (size == null || size < 1) {
+            return DEFAULT_PAGE_SIZE;
         }
-
-        NativeQuery query = NativeQuery.builder()
-                .withQuery(q -> q.match(m -> m.field("title").query(keyword)))
-                .build();
-
-        return elasticsearchOperations.search(query, ProductDoc.class)
-                .stream()
-                .map(SearchHit::getContent)
-                .toList();
+        return Math.min(size, MAX_PAGE_SIZE);
     }
 
     private boolean tryLock(String lockKey, String lockToken) {

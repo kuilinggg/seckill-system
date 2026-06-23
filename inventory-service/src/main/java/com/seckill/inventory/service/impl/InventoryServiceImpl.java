@@ -1,5 +1,6 @@
 package com.seckill.inventory.service.impl;
 
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.seckill.inventory.entity.InventoryReservation;
 import com.seckill.inventory.mapper.InventoryMapper;
@@ -18,6 +19,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryReservationMapper reservationMapper;
 
     @Override
+    @DS("master")
     @Transactional
     public boolean reserveForOrder(String orderNo, Long productId, Integer count) {
         InventoryReservation existing = reservationMapper.selectOne(new LambdaQueryWrapper<InventoryReservation>()
@@ -51,6 +53,7 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    @DS("master")
     @Transactional
     public boolean confirmSell(String orderNo) {
         InventoryReservation reservation = reservationMapper.selectOne(new LambdaQueryWrapper<InventoryReservation>()
@@ -77,6 +80,7 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    @DS("master")
     @Transactional
     public boolean release(String orderNo, String reason) {
         InventoryReservation reservation = reservationMapper.selectOne(new LambdaQueryWrapper<InventoryReservation>()

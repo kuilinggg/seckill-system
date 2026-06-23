@@ -105,13 +105,17 @@ services:
     environment:
       <<: *common-env
       SERVER_PORT: 8081
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      USER_MASTER_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      USER_MASTER_DATASOURCE_USERNAME: root
+      USER_MASTER_DATASOURCE_PASSWORD: root
+      USER_SLAVE_DATASOURCE_URL: jdbc:mysql://mysql-slave:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      USER_SLAVE_DATASOURCE_USERNAME: root
+      USER_SLAVE_DATASOURCE_PASSWORD: root
     ports:
       - "8081:8081"
     depends_on:
       - mysql-master
+      - mysql-slave
 
   user-service-2:
     build:
@@ -123,13 +127,17 @@ services:
     environment:
       <<: *common-env
       SERVER_PORT: 8082
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      USER_MASTER_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      USER_MASTER_DATASOURCE_USERNAME: root
+      USER_MASTER_DATASOURCE_PASSWORD: root
+      USER_SLAVE_DATASOURCE_URL: jdbc:mysql://mysql-slave:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      USER_SLAVE_DATASOURCE_USERNAME: root
+      USER_SLAVE_DATASOURCE_PASSWORD: root
     ports:
       - "8082:8082"
     depends_on:
       - mysql-master
+      - mysql-slave
 
   product-service-1:
     build:
@@ -207,6 +215,7 @@ services:
       - "8087:8087"
     depends_on:
       - mysql-master
+      - mysql-slave
       - redis
       - kafka
 
@@ -230,6 +239,7 @@ services:
       - "8089:8089"
     depends_on:
       - mysql-master
+      - mysql-slave
       - redis
       - kafka
 
@@ -243,14 +253,18 @@ services:
     environment:
       <<: *common-env
       SERVER_PORT: 8088
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      INVENTORY_MASTER_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      INVENTORY_MASTER_DATASOURCE_USERNAME: root
+      INVENTORY_MASTER_DATASOURCE_PASSWORD: root
+      INVENTORY_SLAVE_DATASOURCE_URL: jdbc:mysql://mysql-slave:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      INVENTORY_SLAVE_DATASOURCE_USERNAME: root
+      INVENTORY_SLAVE_DATASOURCE_PASSWORD: root
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8088:8088"
     depends_on:
       - mysql-master
+      - mysql-slave
       - kafka
 
   inventory-service-2:
@@ -263,14 +277,18 @@ services:
     environment:
       <<: *common-env
       SERVER_PORT: 8090
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      INVENTORY_MASTER_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      INVENTORY_MASTER_DATASOURCE_USERNAME: root
+      INVENTORY_MASTER_DATASOURCE_PASSWORD: root
+      INVENTORY_SLAVE_DATASOURCE_URL: jdbc:mysql://mysql-slave:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      INVENTORY_SLAVE_DATASOURCE_USERNAME: root
+      INVENTORY_SLAVE_DATASOURCE_PASSWORD: root
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8090:8090"
     depends_on:
       - mysql-master
+      - mysql-slave
       - kafka
 
   nginx:

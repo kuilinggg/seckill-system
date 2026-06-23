@@ -2,15 +2,14 @@ package com.seckill.product.controller;
 
 import com.seckill.product.common.Result;
 import com.seckill.product.entity.Product;
-import com.seckill.product.search.ProductDoc;
+import com.seckill.product.search.ProductSearchResult;
 import com.seckill.product.service.ProductService;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -39,7 +38,12 @@ public class ProductController {
     }
 
     @GetMapping("/search")
-    public Result<List<ProductDoc>> search(@RequestParam("keyword") String keyword) {
-        return Result.success(productService.searchProducts(keyword));
+    public Result<ProductSearchResult> search(
+            @RequestParam("keyword") String keyword,
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size,
+            @RequestParam(value = "inStockOnly", defaultValue = "false") Boolean inStockOnly,
+            @RequestParam(value = "sort", defaultValue = "relevance") String sort) {
+        return Result.success(productService.searchProducts(keyword, page, size, inStockOnly, sort));
     }
 }

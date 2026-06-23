@@ -2,6 +2,14 @@
 GET http://localhost:8085/api/products/1
 Accept: application/json
 
-### 同步商品到ES
+### 同步商品到 ES
 POST http://localhost:8085/api/products/sync/1
+Accept: application/json
+
+### ES 商品搜索 - 分页、高亮、库存过滤、相关性排序
+GET http://localhost:8085/api/products/search?keyword=Seckill&page=1&size=10&inStockOnly=true&sort=relevance
+Accept: application/json
+
+### ES 商品搜索 - 价格升序
+GET http://localhost:8085/api/products/search?keyword=Seckill&page=1&size=10&sort=price_asc
 Accept: application/json

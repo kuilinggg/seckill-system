@@ -4,13 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seckill.order.entity.Order;
+import com.seckill.order.mapper.OrderMapper;
 import com.seckill.order.message.OrderCreatedEvent;
 import com.seckill.order.message.PaymentResultEvent;
-import com.seckill.order.mapper.OrderMapper;
 import com.seckill.order.service.OrderService;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -38,16 +39,12 @@ public class OrderServiceImpl implements OrderService {
         }
 
         String idemKey = ORDER_IDEMPOTENT_KEY_PREFIX + userId + ":" + productId;
-
-        // 【作业要求-幂等性控制】使用 setIfAbsent 防止同一用户重复抢同一商品。
         Boolean firstOrder = stringRedisTemplate.opsForValue().setIfAbsent(idemKey, "1", Duration.ofHours(2));
         if (!Boolean.TRUE.equals(firstOrder)) {
             throw new IllegalStateException("您已下过该商品订单，请勿重复下单");
         }
 
         String stockKey = PRODUCT_STOCK_KEY_PREFIX + productId;
-
-        // 【作业要求-防超卖控制】使用 Redis 原子递减做库存预扣减。
         Long remainStock = stringRedisTemplate.opsForValue().decrement(stockKey);
         if (remainStock == null) {
             stringRedisTemplate.delete(idemKey);
@@ -83,8 +80,11 @@ public class OrderServiceImpl implements OrderService {
 
             kafkaTemplate.send(TOPIC_ORDER_CREATED, orderNo, messageJson);
             return "下单成功，订单号：" + orderNo + "，正在等待库存确认";
+        } catch (DuplicateKeyException ex) {
+            stringRedisTemplate.opsForValue().increment(stockKey);
+            stringRedisTemplate.delete(idemKey);
+            throw new IllegalStateException("您已下过该商品订单，请勿重复下单");
         } catch (Exception ex) {
-            // 发送失败时回滚预扣库存和幂等键，避免数据错乱。
             stringRedisTemplate.opsForValue().increment(stockKey);
             stringRedisTemplate.delete(idemKey);
             orderMapper.delete(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));

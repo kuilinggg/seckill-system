@@ -1,5 +1,6 @@
 package com.seckill.user.service.impl;
 
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.seckill.user.common.Result;
 import com.seckill.user.entity.User;
@@ -18,6 +19,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
 
     @Override
+    @DS("master")
     public Result<User> register(User user) {
         if (user == null) {
             return Result.error("请求参数不能为空");
@@ -58,6 +60,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @DS("slave_1")
     public Result<User> login(String account, String password) {
         if (!StringUtils.hasText(account) || !StringUtils.hasText(password)) {
             return Result.error("账号或密码不能为空");

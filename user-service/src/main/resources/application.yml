@@ -1,16 +1,30 @@
 server:
-    port: 8081
+  port: 8081
 
 spring:
-    application:
-        name: user-service
-    datasource:
-        url: jdbc:mysql://seckill-mysql:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-        username: root
-        password: 123456
-        driver-class-name: com.mysql.cj.jdbc.Driver
+  application:
+    name: user-service
+  datasource:
+    dynamic:
+      primary: master
+      strict: false
+      datasource:
+        master:
+          url: ${USER_MASTER_DATASOURCE_URL:jdbc:mysql://localhost:13306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false}
+          username: ${USER_MASTER_DATASOURCE_USERNAME:root}
+          password: ${USER_MASTER_DATASOURCE_PASSWORD:root}
+          driver-class-name: com.mysql.cj.jdbc.Driver
+        slave_1:
+          url: ${USER_SLAVE_DATASOURCE_URL:jdbc:mysql://localhost:3307/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false}
+          username: ${USER_SLAVE_DATASOURCE_USERNAME:root}
+          password: ${USER_SLAVE_DATASOURCE_PASSWORD:root}
+          driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis-plus:
-    configuration:
-        map-underscore-to-camel-case: true
-        log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+logging:
+  level:
+    com.baomidou.dynamic.datasource: DEBUG

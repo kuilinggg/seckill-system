@@ -29,7 +29,12 @@
 			<artifactId>mysql-connector-j</artifactId>
 		</dependency>
 
-		<dependency>
+		        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>dynamic-datasource-spring-boot3-starter</artifactId>
+            <version>4.3.1</version>
+        </dependency>
+<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>

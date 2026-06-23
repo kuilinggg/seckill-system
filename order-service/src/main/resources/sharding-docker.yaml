@@ -1,41 +1,70 @@
 databaseName: seckill_order_db
 
 dataSources:
-  ds_0:
+  ds_0_master:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
     jdbcUrl: jdbc:mysql://mysql-master:3306/seckill_order_0?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: root
-  ds_1:
+  ds_0_slave:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://mysql-slave:3306/seckill_order_0?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+  ds_1_master:
     dataSourceClassName: com.zaxxer.hikari.HikariDataSource
     driverClassName: com.mysql.cj.jdbc.Driver
     jdbcUrl: jdbc:mysql://mysql-master:3306/seckill_order_1?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: root
+  ds_1_slave:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://mysql-slave:3306/seckill_order_1?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
 
 rules:
+  - !READWRITE_SPLITTING
+    dataSources:
+      order_ds_0:
+        staticStrategy:
+          writeDataSourceName: ds_0_master
+          readDataSourceNames:
+            - ds_0_slave
+        loadBalancerName: round_robin
+      order_ds_1:
+        staticStrategy:
+          writeDataSourceName: ds_1_master
+          readDataSourceNames:
+            - ds_1_slave
+        loadBalancerName: round_robin
+    loadBalancers:
+      round_robin:
+        type: ROUND_ROBIN
   - !SHARDING
     tables:
       t_order:
-        actualDataNodes: ds_${0..1}.t_order_${0..1}
+        actualDataNodes: order_ds_${0..1}.t_order_${0..1}
         databaseStrategy:
           standard:
             shardingColumn: user_id
             shardingAlgorithmName: order_database_inline
         tableStrategy:
           standard:
-            shardingColumn: id
+            shardingColumn: user_id
             shardingAlgorithmName: order_table_inline
     shardingAlgorithms:
       order_database_inline:
         type: INLINE
         props:
-          algorithm-expression: ds_${user_id % 2}
+          algorithm-expression: order_ds_${user_id % 2}
       order_table_inline:
         type: INLINE
         props:
-          algorithm-expression: t_order_${id % 2}
+          algorithm-expression: t_order_${user_id % 2}
 
 props:
   sql-show: true

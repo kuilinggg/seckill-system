@@ -5,10 +5,20 @@ spring:
   application:
     name: inventory-service
   datasource:
-    url: jdbc:mysql://localhost:13306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    dynamic:
+      primary: master
+      strict: false
+      datasource:
+        master:
+          url: ${INVENTORY_MASTER_DATASOURCE_URL:jdbc:mysql://localhost:13306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false}
+          username: ${INVENTORY_MASTER_DATASOURCE_USERNAME:root}
+          password: ${INVENTORY_MASTER_DATASOURCE_PASSWORD:root}
+          driver-class-name: com.mysql.cj.jdbc.Driver
+        slave_1:
+          url: ${INVENTORY_SLAVE_DATASOURCE_URL:jdbc:mysql://localhost:3307/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false}
+          username: ${INVENTORY_SLAVE_DATASOURCE_USERNAME:root}
+          password: ${INVENTORY_SLAVE_DATASOURCE_PASSWORD:root}
+          driver-class-name: com.mysql.cj.jdbc.Driver
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -24,3 +34,7 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+logging:
+  level:
+    com.baomidou.dynamic.datasource: DEBUG
