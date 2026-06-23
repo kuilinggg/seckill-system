@@ -1,3 +1,9 @@
+x-service-build: &service-build
+  context: .
+  dockerfile: Dockerfile
+
+x-common-env: &common-env
+  TZ: Asia/Shanghai
 
 services:
   mysql-master:
@@ -15,6 +21,7 @@ services:
       - "13306:3306"
     volumes:
       - ./docker/mysql-master/data:/bitnami/mysql
+      - ./db/01-init-schema.sql:/docker-entrypoint-initdb.d/01-init-schema.sql:ro
 
   mysql-slave:
     image: bitnamilegacy/mysql:8.0
@@ -36,59 +43,13 @@ services:
     depends_on:
       - mysql-master
 
-  user-service-1:
-    build:
-      context: ./user-service
-      dockerfile: Dockerfile
-    container_name: user-service-1
-    restart: unless-stopped
-    environment:
-      SERVER_PORT: 8081
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-    ports:
-      - "8081:8081"
-    depends_on:
-      - mysql-master
-
-  user-service-2:
-    build:
-      context: ./user-service
-      dockerfile: Dockerfile
-    container_name: user-service-2
-    restart: unless-stopped
-    environment:
-      SERVER_PORT: 8082
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-    ports:
-      - "8082:8082"
-    depends_on:
-      - mysql-master
-
-  nginx:
-    image: nginx:alpine
-    container_name: seckill-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/html:/usr/share/nginx/html:ro
-    depends_on:
-      - mysql-master
-      - mysql-slave
-      - user-service-1
-      - user-service-2
-
   redis:
     image: redis:alpine
     container_name: seckill-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --requirepass "password123" # 设置一个密码
+    command: redis-server --appendonly yes --requirepass "password123"
 
   elasticsearch:
     image: elasticsearch:7.17.10
@@ -127,7 +88,206 @@ services:
     environment:
       KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
       ALLOW_PLAINTEXT_LISTENER: "yes"
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
     ports:
-      - "9092:9092"
+      - "9092:29092"
+
+  user-service-1:
+    build:
+      <<: *service-build
+      args:
+        MODULE: user-service
+    container_name: user-service-1
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql-master
+
+  user-service-2:
+    build:
+      <<: *service-build
+      args:
+        MODULE: user-service
+    container_name: user-service-2
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql-master
+
+  product-service-1:
+    build:
+      <<: *service-build
+      args:
+        MODULE: product-service
+    container_name: product-service-1
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8085
+      PRODUCT_MASTER_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      PRODUCT_MASTER_DATASOURCE_USERNAME: root
+      PRODUCT_MASTER_DATASOURCE_PASSWORD: root
+      PRODUCT_SLAVE_DATASOURCE_URL: jdbc:mysql://mysql-slave:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      PRODUCT_SLAVE_DATASOURCE_USERNAME: root
+      PRODUCT_SLAVE_DATASOURCE_PASSWORD: root
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: password123
+      ELASTICSEARCH_URIS: http://elasticsearch:9200
+    ports:
+      - "8085:8085"
+    depends_on:
+      - mysql-master
+      - mysql-slave
+      - redis
+      - elasticsearch
+
+  product-service-2:
+    build:
+      <<: *service-build
+      args:
+        MODULE: product-service
+    container_name: product-service-2
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8086
+      PRODUCT_MASTER_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      PRODUCT_MASTER_DATASOURCE_USERNAME: root
+      PRODUCT_MASTER_DATASOURCE_PASSWORD: root
+      PRODUCT_SLAVE_DATASOURCE_URL: jdbc:mysql://mysql-slave:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      PRODUCT_SLAVE_DATASOURCE_USERNAME: root
+      PRODUCT_SLAVE_DATASOURCE_PASSWORD: root
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: password123
+      ELASTICSEARCH_URIS: http://elasticsearch:9200
+    ports:
+      - "8086:8086"
+    depends_on:
+      - mysql-master
+      - mysql-slave
+      - redis
+      - elasticsearch
+
+  order-service-1:
+    build:
+      <<: *service-build
+      args:
+        MODULE: order-service
+    container_name: order-service-1
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8087
+      SPRING_DATASOURCE_URL: jdbc:shardingsphere:classpath:sharding-docker.yaml
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.apache.shardingsphere.driver.ShardingSphereDriver
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: password123
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8087:8087"
+    depends_on:
+      - mysql-master
+      - redis
+      - kafka
+
+  order-service-2:
+    build:
+      <<: *service-build
+      args:
+        MODULE: order-service
+    container_name: order-service-2
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8089
+      SPRING_DATASOURCE_URL: jdbc:shardingsphere:classpath:sharding-docker.yaml
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.apache.shardingsphere.driver.ShardingSphereDriver
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: password123
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8089:8089"
+    depends_on:
+      - mysql-master
+      - redis
+      - kafka
+
+  inventory-service-1:
+    build:
+      <<: *service-build
+      args:
+        MODULE: inventory-service
+    container_name: inventory-service-1
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8088
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8088:8088"
+    depends_on:
+      - mysql-master
+      - kafka
+
+  inventory-service-2:
+    build:
+      <<: *service-build
+      args:
+        MODULE: inventory-service
+    container_name: inventory-service-2
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8090
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-master:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8090:8090"
+    depends_on:
+      - mysql-master
+      - kafka
+
+  nginx:
+    image: nginx:alpine
+    container_name: seckill-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+    depends_on:
+      - user-service-1
+      - user-service-2
+      - product-service-1
+      - product-service-2
+      - order-service-1
+      - order-service-2
+      - inventory-service-1
+      - inventory-service-2

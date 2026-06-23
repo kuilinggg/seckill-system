@@ -10,27 +10,27 @@ spring:
       strict: false
       datasource:
         master:
-          url: jdbc:mysql://localhost:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-          username: root
-          password: root
+          url: ${PRODUCT_MASTER_DATASOURCE_URL:jdbc:mysql://localhost:3306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false}
+          username: ${PRODUCT_MASTER_DATASOURCE_USERNAME:root}
+          password: ${PRODUCT_MASTER_DATASOURCE_PASSWORD:root}
           driver-class-name: com.mysql.cj.jdbc.Driver
         slave_1:
-          url: jdbc:mysql://localhost:3307/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-          username: root
-          password: root
+          url: ${PRODUCT_SLAVE_DATASOURCE_URL:jdbc:mysql://localhost:3307/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false}
+          username: ${PRODUCT_SLAVE_DATASOURCE_USERNAME:root}
+          password: ${PRODUCT_SLAVE_DATASOURCE_PASSWORD:root}
           driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: password123
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:password123}
   elasticsearch:
-    uris: http://localhost:9200
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
 
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 打印 SQL
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 logging:
   level:
-    com.baomidou.dynamic.datasource: DEBUG # 开启多数据源的底层切面日志
+    com.baomidou.dynamic.datasource: DEBUG

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.github
+**/target
+**/*.iml
+.idea
+.vscode
+Dockerfile
+README.md
+tests
+nginx/html
+
+docker/mysql/data
+docker/mysql-master/data
+docker/mysql-slave/data
+docker/**/data
+**/*.log

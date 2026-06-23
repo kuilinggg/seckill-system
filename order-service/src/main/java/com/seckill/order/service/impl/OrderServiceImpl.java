@@ -1,6 +1,7 @@
 package com.seckill.order.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seckill.order.entity.Order;
 import com.seckill.order.message.OrderCreatedEvent;
@@ -9,7 +10,6 @@ import com.seckill.order.mapper.OrderMapper;
 import com.seckill.order.service.OrderService;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -29,6 +29,7 @@ public class OrderServiceImpl implements OrderService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final OrderMapper orderMapper;
+    private final IdentifierGenerator identifierGenerator;
 
     @Override
     public String seckill(Long userId, Long productId) {
@@ -58,9 +59,11 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalStateException("商品已售罄");
         }
 
-        String orderNo = "ORD" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+        Long orderId = identifierGenerator.nextId(null).longValue();
+        String orderNo = "ORD" + orderId;
         try {
             Order order = new Order();
+            order.setId(orderId);
             order.setOrderNo(orderNo);
             order.setUserId(userId);
             order.setProductId(productId);

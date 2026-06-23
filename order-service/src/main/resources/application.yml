@@ -5,10 +5,8 @@ spring:
   application:
     name: order-service
   datasource:
-    url: jdbc:mysql://localhost:13306/seckill?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
+    url: jdbc:shardingsphere:classpath:sharding-local.yaml
   data:
     redis:
       host: localhost

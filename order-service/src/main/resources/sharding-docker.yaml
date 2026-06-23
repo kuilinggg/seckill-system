@@ -1,0 +1,41 @@
+databaseName: seckill_order_db
+
+dataSources:
+  ds_0:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://mysql-master:3306/seckill_order_0?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+  ds_1:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://mysql-master:3306/seckill_order_1?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+
+rules:
+  - !SHARDING
+    tables:
+      t_order:
+        actualDataNodes: ds_${0..1}.t_order_${0..1}
+        databaseStrategy:
+          standard:
+            shardingColumn: user_id
+            shardingAlgorithmName: order_database_inline
+        tableStrategy:
+          standard:
+            shardingColumn: id
+            shardingAlgorithmName: order_table_inline
+    shardingAlgorithms:
+      order_database_inline:
+        type: INLINE
+        props:
+          algorithm-expression: ds_${user_id % 2}
+      order_table_inline:
+        type: INLINE
+        props:
+          algorithm-expression: t_order_${id % 2}
+
+props:
+  sql-show: true
